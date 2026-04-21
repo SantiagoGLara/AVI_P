@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AVI — Análisis Inteligente</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1d27;
+      padding: 20px 40px;
+      border-bottom: 1px solid #2a2d3a;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 { font-size: 1.6rem; color: #fff; }
+    header span { font-size: 0.85rem; color: #888; }
+
+    .container {
+      max-width: 860px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid #2a2d3a;
+    }
+
+    .tab {
+      padding: 10px 22px;
+      cursor: pointer;
+      border-radius: 6px 6px 0 0;
+      font-size: 0.9rem;
+      color: #888;
+      border: 1px solid transparent;
+      border-bottom: none;
+      transition: all 0.2s;
+    }
+
+    .tab:hover { color: #ccc; background: #1a1d27; }
+
+    .tab.active {
+      color: #fff;
+      background: #1a1d27;
+      border-color: #2a2d3a;
+      border-bottom: 1px solid #1a1d27;
+      margin-bottom: -1px;
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed #2a2d3a;
+      border-radius: 12px;
+      padding: 48px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #1a1d27;
+    }
+
+    .upload-zone:hover, .upload-zone.drag { border-color: #4f8ef7; background: #1e2235; }
+    .upload-zone p { color: #888; margin-top: 8px; font-size: 0.9rem; }
+    .upload-zone .icon { font-size: 2.5rem; }
+
+    #file-input { display: none; }
+
+    .file-name {
+      margin-top: 14px;
+      font-size: 0.85rem;
+      color: #4f8ef7;
+      min-height: 20px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-primary { background: #4f8ef7; color: #fff; }
+    .btn-primary:hover { background: #3a7be0; }
+    .btn-primary:disabled { background: #2a3a5a; color: #555; cursor: not-allowed; }
+
+    .btn-secondary { background: #2a2d3a; color: #ccc; }
+    .btn-secondary:hover { background: #33374a; }
+
+    .actions { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* Results */
+    .result-box {
+      margin-top: 28px;
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .result-header {
+      padding: 12px 20px;
+      background: #1e2235;
+      border-bottom: 1px solid #2a2d3a;
+      font-size: 0.85rem;
+      color: #888;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .result-header span { color: #4f8ef7; font-weight: 600; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1px;
+      background: #2a2d3a;
+    }
+
+    .stat-card {
+      background: #1a1d27;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .stat-card .value { font-size: 1.8rem; font-weight: 700; color: #4f8ef7; }
+    .stat-card .label { font-size: 0.75rem; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .interpretation {
+      padding: 20px;
+      line-height: 1.7;
+      font-size: 0.92rem;
+      color: #ccc;
+      white-space: pre-wrap;
+    }
+
+    /* RAG */
+    .query-area {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #e0e0e0;
+      font-size: 0.9rem;
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+    }
+
+    textarea:focus { outline: none; border-color: #4f8ef7; }
+
+    /* Loader */
+    .loader {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      color: #888;
+      font-size: 0.88rem;
+      margin-top: 20px;
+    }
+
+    .loader.show { display: flex; }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid #2a2d3a;
+      border-top-color: #4f8ef7;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error-box {
+      margin-top: 20px;
+      padding: 14px 18px;
+      background: #2a1a1a;
+      border: 1px solid #5a2020;
+      border-radius: 8px;
+      color: #e07070;
+      font-size: 0.88rem;
+      display: none;
+    }
+
+    .error-box.show { display: block; }
+
+    label { font-size: 0.88rem; color: #888; margin-bottom: 6px; display: block; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>AVI</h1>
+  <span>Análisis de datos con IA</span>
+</header>
+
+<div class="container">
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('analisis')">Análisis</div>
+    <div class="tab" onclick="switchTab('reporte')">Reporte</div>
+    <div class="tab" onclick="switchTab('rag')">Consulta RAG</div>
+  </div>
+
+  <!-- Panel: Análisis -->
+  <div class="panel active" id="panel-analisis">
+    <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="icon">📂</div>
+      <strong>Haz clic o arrastra un archivo aquí</strong>
+      <p>Formatos soportados: CSV, Excel (.xlsx)</p>
+    </div>
+    <input type="file" id="file-input" accept=".csv,.xlsx,.xls" />
+    <div class="file-name" id="file-name"></div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="btn-analizar" disabled onclick="analizar()">
+        Analizar
+      </button>
+    </div>
+
+    <div class="loader" id="loader-analisis">
+      <div class="spinner"></div> Analizando con Llama3, puede tardar unos segundos...
+    </div>
+    <div class="error-box" id="error-analisis"></div>
+
+    <div id="resultado-analisis"></div>
+  </div>
+
+  <!-- Panel: Reporte -->
+  <div class="panel" id="panel-reporte">
+    <div class="upload-zone" id="drop-zone-r" onclick="document.getElementById('file-input-r').click()">
+      <div class="icon">📄</div>
+      <strong>Haz clic o arrastra un archivo aquí</strong>
+      <p>Formatos soportados: CSV, Excel (.xlsx)</p>
+    </div>
+    <input type="file" id="file-input-r" accept=".csv,.xlsx,.xls" />
+    <div class="file-name" id="file-name-r"></div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="btn-reporte" disabled onclick="generarReporte()">
+        Generar Reporte
+      </button>
+    </div>
+
+    <div class="loader" id="loader-reporte">
+      <div class="spinner"></div> Generando reporte profesional...
+    </div>
+    <div class="error-box" id="error-reporte"></div>
+
+    <div id="resultado-reporte"></div>
+  </div>
+
+  <!-- Panel: RAG -->
+  <div class="panel" id="panel-rag">
+    <label>Escribe tu pregunta sobre los documentos indexados:</label>
+    <div class="query-area">
+      <textarea id="rag-query" placeholder="Ej: ¿Cuáles son las ventas más altas?"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="consultarRAG()">Consultar</button>
+    </div>
+
+    <div class="loader" id="loader-rag">
+      <div class="spinner"></div> Buscando en documentos...
+    </div>
+    <div class="error-box" id="error-rag"></div>
+    <div id="resultado-rag"></div>
+  </div>
+
+</div>
+
+<script>
+  const API = 'http://127.0.0.1:8000';
+  let uploadedFile = null;
+  let uploadedFileR = null;
+
+  // Tab switching
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', ['analisis','reporte','rag'][i] === name);
+    });
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+
+  // File input - Análisis
+  document.getElementById('file-input').addEventListener('change', e => {
+    handleFile(e.target.files[0], 'analisis');
+  });
+
+  // File input - Reporte
+  document.getElementById('file-input-r').addEventListener('change', e => {
+    handleFile(e.target.files[0], 'reporte');
+  });
+
+  // Drag & drop - Análisis
+  setupDrop('drop-zone', 'analisis');
+  setupDrop('drop-zone-r', 'reporte');
+
+  function setupDrop(zoneId, mode) {
+    const zone = document.getElementById(zoneId);
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('drag');
+      handleFile(e.dataTransfer.files[0], mode);
+    });
+  }
+
+  function handleFile(file, mode) {
+    if (!file) return;
+    if (mode === 'analisis') {
+      uploadedFile = file;
+      document.getElementById('file-name').textContent = '📎 ' + file.name;
+      document.getElementById('btn-analizar').disabled = false;
+    } else {
+      uploadedFileR = file;
+      document.getElementById('file-name-r').textContent = '📎 ' + file.name;
+      document.getElementById('btn-reporte').disabled = false;
+    }
+  }
+
+  async function uploadFile(file) {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${API}/upload`, { method: 'POST', body: form });
+    const data = await res.json();
+    return data.filename;
+  }
+
+  async function analizar() {
+    setLoading('analisis', true);
+    clearResults('analisis');
+    try {
+      const filename = await uploadFile(uploadedFile);
+      const res = await fetch(`${API}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'excel_analysis', file: filename })
+      });
+      const data = await res.json();
+      renderAnalisis(data);
+    } catch (e) {
+      showError('analisis', 'Error al conectar con el servidor: ' + e.message);
+    }
+    setLoading('analisis', false);
+  }
+
+  async function generarReporte() {
+    setLoading('reporte', true);
+    clearResults('reporte');
+    try {
+      const filename = await uploadFile(uploadedFileR);
+      const res = await fetch(`${API}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'report', file: filename })
+      });
+      const data = await res.json();
+      renderReporte(data);
+    } catch (e) {
+      showError('reporte', 'Error al conectar con el servidor: ' + e.message);
+    }
+    setLoading('reporte', false);
+  }
+
+  async function consultarRAG() {
+    const query = document.getElementById('rag-query').value.trim();
+    if (!query) return;
+    setLoading('rag', true);
+    clearResults('rag');
+    try {
+      const res = await fetch(`${API}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'rag_query', query })
+      });
+      const data = await res.json();
+      renderRAG(data);
+    } catch (e) {
+      showError('rag', 'Error al conectar con el servidor: ' + e.message);
+    }
+    setLoading('rag', false);
+  }
+
+  function renderAnalisis(data) {
+    const a = data.analisis;
+    const columnas = a.columnas ? a.columnas.join(', ') : '—';
+    const resumen = a.resumen ? Object.entries(a.resumen) : [];
+
+    let statsHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><div class="value">${a.filas}</div><div class="label">Filas</div></div>
+        <div class="stat-card"><div class="value">${a.columnas?.length || 0}</div><div class="label">Columnas</div></div>
+        ${resumen.map(([col, stats]) => `
+          <div class="stat-card"><div class="value">${stats.mean?.toFixed(1) ?? '—'}</div><div class="label">Promedio ${col}</div></div>
+          <div class="stat-card"><div class="value">${stats.max?.toFixed(0) ?? '—'}</div><div class="label">Máximo ${col}</div></div>
+          <div class="stat-card"><div class="value">${stats.min?.toFixed(0) ?? '—'}</div><div class="label">Mínimo ${col}</div></div>
+        `).join('')}
+      </div>`;
+
+    document.getElementById('resultado-analisis').innerHTML = `
+      <div class="result-box">
+        <div class="result-header">Estadísticas — columnas: <span>${columnas}</span></div>
+        ${statsHTML}
+        <div class="result-header" style="margin-top:1px">Interpretación de Llama3</div>
+        <div class="interpretation">${data.interpretacion}</div>
+      </div>`;
+  }
+
+  function renderReporte(data) {
+    const texto = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    document.getElementById('resultado-reporte').innerHTML = `
+      <div class="result-box">
+        <div class="result-header">Reporte generado por <span>Llama3</span></div>
+        <div class="interpretation">${texto}</div>
+      </div>`;
+  }
+
+  function renderRAG(data) {
+    const texto = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    document.getElementById('resultado-rag').innerHTML = `
+      <div class="result-box">
+        <div class="result-header">Respuesta de <span>Llama3</span></div>
+        <div class="interpretation">${texto}</div>
+      </div>`;
+  }
+
+  function setLoading(mode, show) {
+    document.getElementById('loader-' + mode).classList.toggle('show', show);
+  }
+
+  function showError(mode, msg) {
+    const el = document.getElementById('error-' + mode);
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  function clearResults(mode) {
+    const r = document.getElementById('resultado-' + mode);
+    if (r) r.innerHTML = '';
+    const e = document.getElementById('error-' + mode);
+    if (e) e.classList.remove('show');
+  }
+</script>
+</body>
+</html>

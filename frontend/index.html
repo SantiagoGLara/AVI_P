@@ -216,6 +216,86 @@
     .error-box.show { display: block; }
 
     label { font-size: 0.88rem; color: #888; margin-bottom: 6px; display: block; }
+
+    /* Scheduler */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .form-grid .full { grid-column: 1 / -1; }
+
+    .field input, .field select {
+      width: 100%;
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #e0e0e0;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+    .field input:focus, .field select:focus { outline: none; border-color: #4f8ef7; }
+    .field select option { background: #1a1d27; }
+
+    .section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #555;
+      margin: 28px 0 14px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #2a2d3a;
+    }
+
+    .jobs-table, .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .jobs-table th, .log-table th {
+      text-align: left;
+      padding: 8px 12px;
+      color: #666;
+      font-weight: 500;
+      border-bottom: 1px solid #2a2d3a;
+    }
+    .jobs-table td, .log-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1e2133;
+      color: #ccc;
+      vertical-align: middle;
+    }
+    .jobs-table tr:last-child td, .log-table tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-ok  { background: #1a3a1a; color: #5cb85c; }
+    .badge-error { background: #3a1a1a; color: #e07070; }
+    .badge-warning { background: #3a2e1a; color: #e0a040; }
+
+    .btn-sm {
+      padding: 5px 12px;
+      font-size: 0.78rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn-run  { background: #1e3a1e; color: #5cb85c; }
+    .btn-run:hover { background: #264a26; }
+    .btn-del  { background: #3a1a1a; color: #e07070; }
+    .btn-del:hover { background: #4a2020; }
+
+    .empty-msg { color: #444; font-size: 0.85rem; padding: 20px 0; text-align: center; }
+
+    .refresh-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
   </style>
 </head>
 <body>
@@ -232,6 +312,7 @@
     <div class="tab active" onclick="switchTab('analisis')">Análisis</div>
     <div class="tab" onclick="switchTab('reporte')">Reporte</div>
     <div class="tab" onclick="switchTab('rag')">Consulta RAG</div>
+    <div class="tab" onclick="switchTab('auto')">Automatización</div>
   </div>
 
   <!-- Panel: Análisis -->
@@ -299,6 +380,108 @@
     <div id="resultado-rag"></div>
   </div>
 
+  <!-- Panel: Automatización -->
+  <div class="panel" id="panel-auto">
+
+    <p class="section-title">Nueva tarea programada</p>
+
+    <div class="form-grid">
+      <div class="field full">
+        <label>Nombre de la tarea</label>
+        <input type="text" id="job-name" placeholder="Ej: Análisis diario ventas" />
+      </div>
+      <div class="field full">
+        <label>Carpeta a monitorear</label>
+        <input type="text" id="job-folder" placeholder="Ej: C:/datos  o  data/uploads" value="data/uploads" />
+      </div>
+      <div class="field">
+        <label>Filtro de archivos <span style="color:#555">(opcional)</span></label>
+        <input type="text" id="job-pattern" placeholder="Ej: ventas  →  ventas*.csv" />
+      </div>
+      <div class="field">
+        <label>Acción a ejecutar</label>
+        <select id="job-action">
+          <option value="analisis">Análisis estadístico</option>
+          <option value="reporte">Reporte profesional</option>
+          <option value="ambos">Análisis + Reporte</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label>Ejecutar cada</label>
+        <select id="job-interval">
+          <option value="5">5 minutos</option>
+          <option value="15">15 minutos</option>
+          <option value="30">30 minutos</option>
+          <option value="60" selected>1 hora</option>
+          <option value="360">6 horas</option>
+          <option value="720">12 horas</option>
+          <option value="1440">24 horas (diario)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="crearTarea()">Crear tarea</button>
+    </div>
+
+    <div class="loader" id="loader-auto">
+      <div class="spinner"></div> Procesando...
+    </div>
+    <div class="error-box" id="error-auto"></div>
+
+    <!-- Lista de tareas -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 32px;">
+      <p class="section-title" style="margin:0">Tareas activas</p>
+      <button class="btn btn-secondary" style="padding:6px 14px;font-size:0.8rem" onclick="cargarTareas()">Actualizar</button>
+    </div>
+
+    <div class="result-box" style="margin-top:10px">
+      <div style="overflow-x:auto; padding: 4px 0">
+        <table class="jobs-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Carpeta</th>
+              <th>Filtro</th>
+              <th>Acción</th>
+              <th>Cada</th>
+              <th>Próxima ejecución</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="jobs-tbody">
+            <tr><td colspan="7" class="empty-msg">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Log de ejecuciones -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 28px;">
+      <p class="section-title" style="margin:0">Últimas ejecuciones</p>
+      <button class="btn btn-secondary" style="padding:6px 14px;font-size:0.8rem" onclick="cargarLogs()">Actualizar</button>
+    </div>
+
+    <div class="result-box" style="margin-top:10px">
+      <div style="overflow-x:auto; padding: 4px 0">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Hora</th>
+              <th>Tarea</th>
+              <th>Estado</th>
+              <th>Mensaje</th>
+            </tr>
+          </thead>
+          <tbody id="logs-tbody">
+            <tr><td colspan="4" class="empty-msg">Sin ejecuciones aún</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
 </div>
 
 <script>
@@ -309,10 +492,11 @@
   // Tab switching
   function switchTab(name) {
     document.querySelectorAll('.tab').forEach((t, i) => {
-      t.classList.toggle('active', ['analisis','reporte','rag'][i] === name);
+      t.classList.toggle('active', ['analisis','reporte','rag','auto'][i] === name);
     });
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('panel-' + name).classList.add('active');
+    if (name === 'auto') { cargarTareas(); cargarLogs(); }
   }
 
   // File input - Análisis
@@ -474,6 +658,129 @@
     if (r) r.innerHTML = '';
     const e = document.getElementById('error-' + mode);
     if (e) e.classList.remove('show');
+  }
+
+  // ─── Automatización ────────────────────────────────────────────────
+
+  const INTERVALO_LABELS = {
+    5:'5 min', 15:'15 min', 30:'30 min',
+    60:'1 hora', 360:'6 horas', 720:'12 horas', 1440:'24 horas'
+  };
+  const ACCION_LABELS = {
+    analisis:'Análisis', reporte:'Reporte', ambos:'Análisis + Reporte'
+  };
+
+  async function crearTarea() {
+    const name    = document.getElementById('job-name').value.trim();
+    const folder  = document.getElementById('job-folder').value.trim();
+    const pattern = document.getElementById('job-pattern').value.trim();
+    const action  = document.getElementById('job-action').value;
+    const interval_minutes = parseInt(document.getElementById('job-interval').value);
+
+    if (!name || !folder) {
+      showError('auto', 'El nombre y la carpeta son obligatorios.');
+      return;
+    }
+
+    document.getElementById('error-auto').classList.remove('show');
+    setLoading('auto', true);
+
+    try {
+      const res = await fetch(`${API}/scheduler/jobs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, folder, action, interval_minutes, pattern })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Error al crear la tarea');
+      }
+      document.getElementById('job-name').value = '';
+      document.getElementById('job-pattern').value = '';
+      await cargarTareas();
+    } catch (e) {
+      showError('auto', e.message);
+    }
+    setLoading('auto', false);
+  }
+
+  async function cargarTareas() {
+    try {
+      const res = await fetch(`${API}/scheduler/jobs`);
+      const jobs = await res.json();
+      const tbody = document.getElementById('jobs-tbody');
+
+      if (!jobs.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">No hay tareas programadas</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = jobs.map(j => `
+        <tr>
+          <td><strong style="color:#fff">${j.name}</strong></td>
+          <td style="font-size:0.8rem;color:#888">${j.folder}</td>
+          <td style="font-size:0.8rem;color:#888">${j.pattern || '—'}</td>
+          <td>${ACCION_LABELS[j.action] || j.action}</td>
+          <td>${INTERVALO_LABELS[j.interval_minutes] || j.interval_minutes + ' min'}</td>
+          <td style="font-size:0.8rem;color:#888">${j.next_run || '—'}</td>
+          <td style="display:flex;gap:6px">
+            <button class="btn-sm btn-run" onclick="ejecutarAhora('${j.id}')">▶ Ahora</button>
+            <button class="btn-sm btn-del" onclick="eliminarTarea('${j.id}')">✕ Eliminar</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      document.getElementById('jobs-tbody').innerHTML =
+        '<tr><td colspan="7" class="empty-msg">Error al conectar con el servidor</td></tr>';
+    }
+  }
+
+  async function ejecutarAhora(jobId) {
+    try {
+      const res = await fetch(`${API}/scheduler/jobs/${jobId}/run`, { method: 'POST' });
+      if (!res.ok) throw new Error();
+      setTimeout(cargarLogs, 800);
+    } catch {
+      alert('Error al ejecutar la tarea');
+    }
+  }
+
+  async function eliminarTarea(jobId) {
+    if (!confirm('¿Eliminar esta tarea programada?')) return;
+    try {
+      await fetch(`${API}/scheduler/jobs/${jobId}`, { method: 'DELETE' });
+      await cargarTareas();
+    } catch {
+      alert('Error al eliminar la tarea');
+    }
+  }
+
+  async function cargarLogs() {
+    try {
+      const res = await fetch(`${API}/scheduler/logs`);
+      const logs = await res.json();
+      const tbody = document.getElementById('logs-tbody');
+
+      if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-msg">Sin ejecuciones aún</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = logs.map(l => {
+        const badgeClass = l.status === 'ok' ? 'badge-ok'
+                         : l.status === 'error' ? 'badge-error' : 'badge-warning';
+        return `
+          <tr>
+            <td style="font-size:0.8rem;color:#888;white-space:nowrap">${l.timestamp}</td>
+            <td>${l.job_name}</td>
+            <td><span class="badge ${badgeClass}">${l.status}</span></td>
+            <td style="font-size:0.82rem;color:#aaa">${l.message}</td>
+          </tr>`;
+      }).join('');
+    } catch {
+      document.getElementById('logs-tbody').innerHTML =
+        '<tr><td colspan="4" class="empty-msg">Error al conectar con el servidor</td></tr>';
+    }
   }
 </script>
 </body>
